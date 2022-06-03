@@ -14,8 +14,22 @@ connect = mysql.connector.connect(
   charset='utf8'
 )
 cursor = connect.cursor()
+
+def to_data(v):
+  if v.lower() in ("yes", "true"):
+    return '1'
+  elif v.lower() in ("no", "false"):
+    return '0'
+  elif v.startswith('\'') or v.startswith('"'):
+    return v
+  else:
+    return '\'{}\''.format(v)
+
 if (setting.tables):
   for table in setting.tables.keys():
+    isExist = os.path.exists(setting.output_dir)
+    if not isExist:
+      os.makedirs(setting.output_dir)
     print("---------------------------------------------------------------------------------")
     print("table: ", table)
     print("csv_file: ", setting.tables[table]["csv_file"])
@@ -31,15 +45,16 @@ if (setting.tables):
         #print("mapping_cols_csv: ", mapping_cols_csv)
         cols = list(dict(row).values())
         #print(len(cols))
-        insert_data = ['\'{}\''.format(cols[i-1].strip()) for i in mapping_cols_csv]
+        insert_data = [to_data(cols[i-1].strip()) for i in mapping_cols_csv]
         #print("insert_data: ", insert_data)
         sql_insert = 'INSERT INTO ' + table + ' (' + ','.join(mapping_cols) + ') values(' + ','.join(insert_data) + ');'
         if setting.import_type["import_data"]:
           try:
             cursor.execute(sql_insert)
-          except:
+          except Exception as e:
             print(sql_insert)
-            print('Error')
+            print(e)
+
 
         if setting.import_type["sql_generate"]:
           print(sql_insert, file=sql_file)
